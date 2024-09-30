@@ -700,7 +700,7 @@ function AuctionatorSaleItemMixin:GetDuration()
 end
 
 function AuctionatorSaleItemMixin:PostAllItems()
-  local duration = 1
+  local duration = 3
   local quantity = 1
   
   for bagId = BACKPACK_CONTAINER, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
@@ -708,21 +708,35 @@ function AuctionatorSaleItemMixin:PostAllItems()
       local itemLink = C_Container.GetContainerItemLink(bagId, slotId)
       if itemLink then
         local itemID = C_Item.GetItemIDForItemInfo(itemLink)
+
         local itemName, itemLink, itemRarity, itemLevel = GetItemInfo(itemLink)
         local craftData = CraftInfoAnywhere.API.GetData(itemID, itemLevel) 
+        local buyout = 0
         
-        if craftData and craftData.auctionPrice then        
-          local location = ItemLocation:CreateFromBagAndSlot(bagId, slotId)  
-          local buyout = craftData.auctionPrice                    
-          local action = '?'
+        if craftData then
+          buyout = craftData.auctionPrice
+        end
 
+        if itemID == 199049 then
+          local auctionPrice = Auctionator.Database:GetPrice('g:'..itemID)
+          buyout = 100000000
+        end
+        
+        if buyout > 0 then        
+          local location = ItemLocation:CreateFromBagAndSlot(bagId, slotId)  
           C_AuctionHouse.PostItem(location, duration, quantity, nil, buyout)
           
-          local dsbuyout = Auctionator.Utilities.CreatePaddedMoneyString(buyout, false, false)
-          local dsprofit = Auctionator.Utilities.CreatePaddedMoneyString(craftData.profit, false, false)
+          local dsbuyout = Auctionator.Utilities.CreatePaddedMoneyString(buyout, false, false)          
+          local dsprofit = ''
+          
+          if craftData and craftData.profit then
+            dsprofit = '-> profit: ' .. Auctionator.Utilities.CreatePaddedMoneyString(craftData.profit, false, false)
+          end
 
-          print('[Posted]', itemLink, 'for', dsbuyout, ' -> profit: ', dsprofit)
+          print('[Posted]', itemLink, 'for', dsbuyout, dsprofit)
           return
+        else
+          print('[Skipped]', itemID, itemLink)
         end
       end
     end
