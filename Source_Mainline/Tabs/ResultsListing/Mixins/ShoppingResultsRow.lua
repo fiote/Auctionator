@@ -1,38 +1,51 @@
 AuctionatorShoppingResultsRowMixin = CreateFromMixins(AuctionatorResultsRowTemplateMixin)
 
-local function debugtable(tab) 
-  print("=====================================")
-  print("SIZE:", #tab)
-  print("{")
-  if not tab then
-    print("nil")
-  else
-    for k,v in pairs(tab) do
-      print('"'..k..'" = '..tostring(v))
-    end
+local purchasing = nil
+
+function PurchaseCommodity(itemID, quantity, cell)
+  if purchasing then
+    return false
   end
-  print("}")
-  print("=====================================")
+
+  purchasing = {
+    itemID = itemID,
+    quantity = quantity,
+    cell = cell
+  }
+  
+  purchasing.cell.text:SetText("starting")
+  C_AuctionHouse.StartCommoditiesPurchase(purchasing.itemID, purchasing.quantity)
+  return true  
 end
 
-local item = {}
+local function OnReadyToConfirmPurchaseEvent(self, event)
+  if not purchasing then
+    return
+  end
 
-function PurchaseCommodity(itemID, quantity)
-	C_AuctionHouse.StartCommoditiesPurchase(itemID, quantity)
-	item.itemID = itemID
-	item.quantity = quantity
+  purchasing.cell.text:SetText("confirming")
+	C_AuctionHouse.ConfirmCommoditiesPurchase(purchasing.itemID, purchasing.quantity)
 end
 
-local function PurchaseCommodityOnEvent(self, event)
-	if next(item) then
-		C_AuctionHouse.ConfirmCommoditiesPurchase(item.itemID, item.quantity)
-		wipe(item)
-	end
+local function OnPurchaseCompletedEvent()
+  if not purchasing then
+    return
+  end
+  
+  purchasing.cell.text:SetText("purchased")
+
+  purchasing = nil
 end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("AUCTION_HOUSE_THROTTLED_SYSTEM_READY")
-f:SetScript("OnEvent", PurchaseCommodityOnEvent)
+f:SetScript("OnEvent", OnReadyToConfirmPurchaseEvent)
+
+local f2 = CreateFrame("Frame")
+f2:RegisterEvent("AUCTION_HOUSE_PURCHASE_COMPLETED")
+f2:SetScript("OnEvent", OnPurchaseCompletedEvent)
+
+
 
 function AuctionatorShoppingResultsRowMixin:OnClick(button, ...)
   Auctionator.Debug.Message("AuctionatorShoppingResultsRowMixin:OnClick()")
@@ -45,7 +58,19 @@ function AuctionatorShoppingResultsRowMixin:OnClick(button, ...)
       local itemKeyInfo = C_AuctionHouse.GetItemKeyInfo(self.rowData.itemKey)
       local quantity = self.rowData.purchaseQuantity or 1
       if itemKeyInfo.isCommodity then
-        PurchaseCommodity(itemKeyInfo.itemID, quantity)
+        
+        if self.rowData.purchased then
+          return
+        end
+
+        local cell = self.cells[5]
+
+        local started = PurchaseCommodity(itemKeyInfo.itemID, quantity, cell)
+        
+        if started then
+          self.rowData.purchased = true
+        end
+
         return
       end
     end
