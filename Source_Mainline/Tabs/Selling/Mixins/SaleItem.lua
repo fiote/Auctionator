@@ -718,8 +718,25 @@ function AuctionatorSaleItemMixin:PostAllItems()
         end
 
         if itemID == 199049 then
-          local auctionPrice = Auctionator.Database:GetPrice('g:'..itemID)
-          buyout = 100000000
+          local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:PostAllItems', itemID)
+          
+          local gold = 10000
+          
+          local gbuy = 2000*gold
+          local gmin = 7000*gold
+          local gmax = 10000*gold
+
+          if (auctionPrice < gbuy) then
+            local dsprice = Auctionator.Utilities.CreatePaddedMoneyString(auctionPrice, false, false)     
+            print('[NeedBuying]', itemID, itemLink, dsprice)            
+            return
+          end
+
+          if auctionPrice > gmin and auctionPrice <= gmax then
+            buyout = auctionPrice-gold
+          else 
+            buyout = gmax
+          end
         end
         
         if buyout > 0 then        
