@@ -79,6 +79,11 @@
           <Anchor point="BOTTOMLEFT" relativeKey="$parent.MoreButton" relativePoint="BOTTOMRIGHT" x="5"/>
         </Anchors>
       </Button>
+      <Button parentKey="RetryButton" name="AuctionatorRetryButton" inherits="UIPanelDynamicResizeButtonTemplate" text="AUCTIONATOR_L_RETRY">
+        <Anchors>
+          <Anchor point="BOTTOMLEFT" relativeKey="$parent.AddToListButton" relativePoint="BOTTOMRIGHT" x="5"/>
+        </Anchors>
+      </Button>
     </Frames>
   </Frame>
 

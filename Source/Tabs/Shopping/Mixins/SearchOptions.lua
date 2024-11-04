@@ -23,6 +23,10 @@ function AuctionatorShoppingTabSearchOptionsMixin:OnLoad()
     end
   end)
 
+  self.RetryButton:SetScript("OnClick", function()
+    TryRetryPurchase()
+  end)
+
   Auctionator.EventBus:Register(self, {
     Auctionator.Shopping.Tab.Events.SearchStart,
     Auctionator.Shopping.Tab.Events.SearchEnd,
