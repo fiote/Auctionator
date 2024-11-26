@@ -16,6 +16,18 @@ local copperIcon = "|TInterface\\MoneyFrame\\UI-CopperIcon:12:12:0:0|t"
 local leftPadding = " "
 local rightPadding = " "
 
+local function thousand_comma(amount)
+  local formatted = amount
+  while true do  
+    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+    if (k==0) then
+      break
+    end
+  end
+  return formatted
+end
+
+
 function Auctionator.Utilities.CreatePaddedMoneyString(amount, showSilver, showCopper)
   amount = math.floor(amount)
 
@@ -50,7 +62,7 @@ function Auctionator.Utilities.CreatePaddedMoneyString(amount, showSilver, showC
     if result ~= '' then
       result = rightPadding .. result
     end
-    result = gold .. leftPadding .. goldIcon .. result
+    result = thousand_comma(gold) .. leftPadding .. goldIcon .. result
   end
 
   return result
