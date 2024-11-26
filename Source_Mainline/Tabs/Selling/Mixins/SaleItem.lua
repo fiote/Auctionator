@@ -729,7 +729,7 @@ function AuctionatorSaleItemMixin:PostAllItems()
           if (auctionPrice < gbuy) then
             local dsprice = Auctionator.Utilities.CreatePaddedMoneyString(auctionPrice, false, false)     
             print('[NeedBuying]', itemID, itemLink, dsprice)            
-            return
+            -- return
           end
 
           if auctionPrice > gmin and auctionPrice <= gmax then
