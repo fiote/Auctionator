@@ -2,10 +2,7 @@ function Auctionator.API.v1.GetAuctionPriceByItemID(callerID, itemID, itemLevel)
   Auctionator.API.InternalVerifyID(callerID)
 
   if type(itemID) ~= "number" then
-    Auctionator.API.ComposeError(
-      callerID,
-      "Usage Auctionator.API.v1.GetAuctionPriceByItemID(string, number)"
-    )
+    return
   end
 
   if itemLevel ~= nil and type(itemLevel) ~= "number" then
