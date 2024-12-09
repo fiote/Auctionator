@@ -143,5 +143,5 @@ function AuctionatorShoppingTabSearchOptionsMixin:GetSearchTerm()
 end
 
 function AuctionatorShoppingTabSearchOptionsMixin:FocusSearchBox()
-  self.SearchString:SetFocus()
+  -- self.SearchString:SetFocus()
 end
