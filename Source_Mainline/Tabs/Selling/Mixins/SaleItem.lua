@@ -700,9 +700,15 @@ function AuctionatorSaleItemMixin:GetDuration()
   return AUCTION_DURATIONS[self.Duration:GetValue()]
 end
 
+
 function AuctionatorSaleItemMixin:RunAutoLogic()
   local duration = 3
   local quantity = 1
+
+  local shopRan = AuctionatorShoppingFrame:RunAutoLogic()
+  if shopRan then
+    return
+  end
   
   for bagId = BACKPACK_CONTAINER, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
     for slotId = 1, C_Container.GetContainerNumSlots(bagId) do

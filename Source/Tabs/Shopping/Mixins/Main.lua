@@ -6,6 +6,7 @@ local EVENTBUS_EVENTS = {
   Auctionator.Shopping.Tab.Events.ShowHistoricalPrices,
   Auctionator.Shopping.Tab.Events.UpdateSearchTerm,
   Auctionator.Shopping.Tab.Events.BuyScreenShown,
+  Auctionator.Shopping.Tab.Events.SearchEnd
 }
 
 function AuctionatorShoppingTabFrameMixin:DoSearch(terms, options)
@@ -24,6 +25,18 @@ function AuctionatorShoppingTabFrameMixin:DoSearch(terms, options)
   self.SearchProvider:Search(terms, options or {})
   self:StartSpinner()
 end
+
+local mainSearchDone = false
+
+function AuctionatorShoppingTabFrameMixin:RunAutoLogic()
+  if not mainSearchDone then  
+    print('Starting mainSearch...')
+    local shoppingList = Auctionator.Shopping.ListManager:GetByIndex(1)    
+    self:DoSearch(shoppingList:GetAllItems())
+    return true
+  end
+end
+
 
 function AuctionatorShoppingTabFrameMixin:StopSearch()
   self.searchRunning = false
@@ -260,6 +273,12 @@ function AuctionatorShoppingTabFrameMixin:ReceiveEvent(eventName, eventData)
 
   elseif eventName == Auctionator.Shopping.Tab.Events.BuyScreenShown then
     self:StopSearch()
+
+  elseif eventName == Auctionator.Shopping.Tab.Events.SearchEnd then
+    if not mainSearchDone then
+      print('MainSearch completed!')
+      mainSearchDone = true
+    end
   end
 end
 
