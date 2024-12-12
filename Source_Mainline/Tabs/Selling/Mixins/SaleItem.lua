@@ -700,7 +700,7 @@ function AuctionatorSaleItemMixin:GetDuration()
   return AUCTION_DURATIONS[self.Duration:GetValue()]
 end
 
-function AuctionatorSaleItemMixin:PostAllItems()
+function AuctionatorSaleItemMixin:RunAutoLogic()
   local duration = 3
   local quantity = 1
   
@@ -719,7 +719,7 @@ function AuctionatorSaleItemMixin:PostAllItems()
         end
 
         if itemID == 199049 then
-          local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:PostAllItems', itemID)
+          local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
           
           local gold = 10000
           
