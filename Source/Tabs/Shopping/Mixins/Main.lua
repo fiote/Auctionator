@@ -110,6 +110,7 @@ function AuctionatorShoppingTabFrameMixin:SetupSearchProvider()
       self.ListsContainer.LoadingSpinner:Hide()
       self.ListsContainer.ResultsText:Hide()      
 	    FlashClientIcon()
+      PlaySoundFile(567286)
     end,
     function(current, total, partialResults)
       Auctionator.EventBus:Fire(self, Auctionator.Shopping.Tab.Events.SearchIncrementalUpdate, partialResults, total, current)
