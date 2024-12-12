@@ -700,13 +700,59 @@ function AuctionatorSaleItemMixin:GetDuration()
   return AUCTION_DURATIONS[self.Duration:GetValue()]
 end
 
+local tryingPosting = nil
+local isCurrentlyPosting = false
+
+function OnCurrentlyPurchasingEvent(self, eventName, ...)
+
+  if tryingPosting then
+    if eventName == 'AUCTION_HOUSE_THROTTLED_MESSAGE_SENT' then
+      isCurrentlyPosting = true
+      return
+    end
+
+    if eventName == 'AUCTION_HOUSE_AUCTION_CREATED' then
+      print('[Posted]', tryingPosting)
+      tryingPosting = nil
+      isCurrentlyPosting = false
+      return
+    end
+
+    if eventName == 'AUCTION_HOUSE_THROTTLED_MESSAGE_DROPPED' then
+      print('[Dropped]', tryingPosting)
+      tryingPosting = nil
+      isCurrentlyPosting = false
+      return
+    end
+
+    if eventName == 'AUCTION_HOUSE_POST_ERROR' then
+      print('[Error]', tryingPosting)
+      tryingPosting = nil
+      isCurrentlyPosting = false
+      return
+    end
+  end
+end
+
+local f = CreateFrame("Frame")
+f:RegisterEvent("AUCTION_HOUSE_AUCTION_CREATED")
+f:RegisterEvent("AUCTION_HOUSE_POST_ERROR")
+-- f:RegisterEvent("AUCTION_HOUSE_POST_WARNING")
+f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_DROPPED")
+-- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED")
+-- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED")
+f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_SENT")
+-- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_SYSTEM_READY")
+f:SetScript("OnEvent", OnCurrentlyPurchasingEvent)
+
 
 function AuctionatorSaleItemMixin:RunAutoLogic()
   local duration = 3
   local quantity = 1
 
-  local shopRan = AuctionatorShoppingFrame:RunAutoLogic()
-  if shopRan then
+  -- if AuctionatorShoppingFrame:RunAutoLogic() then return end
+
+  if isCurrentlyPosting then
     return
   end
   
@@ -748,7 +794,6 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
         
         if buyout > 0 then        
           local location = ItemLocation:CreateFromBagAndSlot(bagId, slotId)  
-          C_AuctionHouse.PostItem(location, duration, quantity, nil, buyout)
           
           local dsbuyout = Auctionator.Utilities.CreatePaddedMoneyString(buyout, false, false)          
           local dsprofit = ''
@@ -757,7 +802,9 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
             dsprofit = '-> profit: ' .. Auctionator.Utilities.CreatePaddedMoneyString(craftData.profit, false, false)
           end
 
-          print('[Posted]', itemLink, 'for', dsbuyout, dsprofit)
+          print('[Posting]', itemLink, 'for', dsbuyout, dsprofit)
+          tryingPosting = itemLink
+          C_AuctionHouse.PostItem(location, duration, quantity, nil, buyout)
           return
         else
           print('[Skipped]', itemID, itemLink)
