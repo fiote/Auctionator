@@ -524,8 +524,10 @@ function AuctionatorSaleItemMixin:ProcessCommodityResults(itemID, ...)
 
   if self.itemInfo then
     local qtresults = C_AuctionHouse.GetNumCommoditySearchResults(itemID)
+    -- consider only the first 15 results
     if qtresults > 15 then qtresults = 15 end
 
+    -- find the biggest stack on those first values, and store its price
     local biggestStack = 0
     local biggestStackPrice = 0
 
@@ -537,17 +539,15 @@ function AuctionatorSaleItemMixin:ProcessCommodityResults(itemID, ...)
       end
     end
 
-    local dsbigstack = Auctionator.Utilities.CreatePaddedMoneyString(biggestStackPrice, true, false)
-
+    -- this is the minimum price we should consider
     local minGoodPrice = biggestStackPrice * 0.95
 
+    -- then, instead of using the lowest price, we use the first price that is acceptable
     for index = 1, qtresults do
       local resultInfo = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, index)
       if resultInfo.unitPrice >= minGoodPrice then
-        local prOff = (biggestStackPrice - resultInfo.unitPrice) / biggestStackPrice * 100
-        local dsoff = string.format('%.0f', prOff)..'%'
-        -- print(self.itemInfo.itemLink, dsbigstack, '...', dsoff, '...', '#'..index, '...', Auctionator.Utilities.CreatePaddedMoneyString(resultInfo.unitPrice, true, false))
         self:UpdateSalesPrice(resultInfo.unitPrice)
+        -- and then we return to ignore the default 'match price' logic
         return
       end
     end
