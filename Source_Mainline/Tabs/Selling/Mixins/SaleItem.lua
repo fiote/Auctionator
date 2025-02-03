@@ -701,10 +701,10 @@ function AuctionatorSaleItemMixin:GetDuration()
 end
 
 local tryingPosting = nil
+local waitingReadyEvent = false
 local isCurrentlyPosting = false
 
 function OnCurrentlyPurchasingEvent(self, eventName, ...)
-
   if tryingPosting then
     if eventName == 'AUCTION_HOUSE_THROTTLED_MESSAGE_SENT' then
       isCurrentlyPosting = true
@@ -712,9 +712,8 @@ function OnCurrentlyPurchasingEvent(self, eventName, ...)
     end
 
     if eventName == 'AUCTION_HOUSE_AUCTION_CREATED' then
-      print('[Posted]', tryingPosting)
       tryingPosting = nil
-      isCurrentlyPosting = false
+      waitingReadyEvent = true
       return
     end
 
@@ -731,30 +730,70 @@ function OnCurrentlyPurchasingEvent(self, eventName, ...)
       isCurrentlyPosting = false
       return
     end
+
+    if eventName == 'AUCTION_HOUSE_POST_WARNING' then
+      print('[Warn]', tryingPosting)
+      tryingPosting = nil
+      isCurrentlyPosting = false
+      return
+    end
   end
+
+  if waitingReadyEvent then
+    if eventName == 'AUCTION_HOUSE_THROTTLED_SYSTEM_READY' then
+      C_Timer.After(0.3, function() 
+        print('[AH Ready]', '('..QtItemsInBag()..' in bag)')
+        isCurrentlyPosting = false
+        waitingReadyEvent = false
+      end)
+      return
+    end
+  end 
 end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("AUCTION_HOUSE_AUCTION_CREATED")
 f:RegisterEvent("AUCTION_HOUSE_POST_ERROR")
--- f:RegisterEvent("AUCTION_HOUSE_POST_WARNING")
+f:RegisterEvent("AUCTION_HOUSE_POST_WARNING")
 f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_DROPPED")
 -- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED")
 -- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED")
 f:RegisterEvent("AUCTION_HOUSE_THROTTLED_MESSAGE_SENT")
--- f:RegisterEvent("AUCTION_HOUSE_THROTTLED_SYSTEM_READY")
+f:RegisterEvent("AUCTION_HOUSE_THROTTLED_SYSTEM_READY")
 f:SetScript("OnEvent", OnCurrentlyPurchasingEvent)
 
+function MONEY(money)
+  return Auctionator.Utilities.CreatePaddedMoneyString(money, false, false)
+end
+
+function QtItemsInBag() 
+  local qtItems = 0
+  
+  for bagId = BACKPACK_CONTAINER, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
+    for slotId = 1, C_Container.GetContainerNumSlots(bagId) do
+      local itemLink = C_Container.GetContainerItemLink(bagId, slotId)
+      if itemLink then
+        qtItems = qtItems + 1
+      end
+    end
+  end
+
+  return qtItems
+end
 
 function AuctionatorSaleItemMixin:RunAutoLogic()
-  local duration = 3
+  local duration = 3 
   local quantity = 1
 
-  -- if AuctionatorShoppingFrame:RunAutoLogic() then return end
+  local WM = WarbandMoney.addon;
 
-  if isCurrentlyPosting then
+  if AuctionatorShoppingFrame:RunAutoLogic() then return end
+
+  if isCurrentlyPosting or waitingReadyEvent or tryingPosting then
     return
   end
+  
+  isCurrentlyPosting = true
   
   for bagId = BACKPACK_CONTAINER, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
     for slotId = 1, C_Container.GetContainerNumSlots(bagId) do
@@ -765,53 +804,85 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
         local itemName, itemLink, itemRarity, itemLevel = GetItemInfo(itemLink)
         local craftData = CraftInfoAnywhere.API.GetData(itemID, itemLevel) 
         local buyout = 0
-        
+
+        local dsprofit = ''
+        local overselling = ''
+
         if craftData then
+
           buyout = craftData.auctionPrice
-        end
-
-        if itemID == 199049 then
-          local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
+          if craftData.profit < WM.minProfitPerItem*0.98 then            
+            buyout = WM.oversellPrice
+            craftData.profit = WM.oversellPrice - craftData.craftCost
+            overselling = '[OVERSELLING]'
+          end          
           
-          local gold = 10000
-          
-          local gbuy = 2000*gold
-          local gmin = 7000*gold
-          local gmax = 10000*gold
-
-          if (auctionPrice < gbuy) then
-            local dsprice = Auctionator.Utilities.CreatePaddedMoneyString(auctionPrice, false, false)     
-            print('[NeedBuying]', itemID, itemLink, dsprice)            
-            -- return
-          end
-
-          if auctionPrice > gmin and auctionPrice <= gmax then
-            buyout = auctionPrice-gold
-          else 
-            buyout = gmax
-          end
+          dsprofit = MONEY(craftData.profit)
         end
         
-        if buyout > 0 then        
-          local location = ItemLocation:CreateFromBagAndSlot(bagId, slotId)  
-          
-          local dsbuyout = Auctionator.Utilities.CreatePaddedMoneyString(buyout, false, false)          
-          local dsprofit = ''
-          
-          if craftData and craftData.profit then
-            dsprofit = '-> profit: ' .. Auctionator.Utilities.CreatePaddedMoneyString(craftData.profit, false, false)
-          end
+        local gold = WM.g            
 
-          print('[Posting]', itemLink, 'for', dsbuyout, dsprofit)
+        if itemID == WM.swordID then -- sword item
+          local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
+          local auctionEntry = Auctionator.API.v1.GetAuctionEntryByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
+
+          print('[Sword]', 'price', MONEY(auctionPrice), 'qty', tostring(auctionEntry.qty))
+            
+          local auctionQty = 0
+          if auctionEntry and auctionEntry.qty then auctionQty = auctionEntry.qty end
+
+          if auctionQty < 1 then
+            print('[Sword]', 'no amount, lets set it to max')
+            buyout = WM.swordSellMax
+          else
+            if (auctionPrice < WM.swordBuyFor) then
+              print('[Sword]', '[GOOD PRICE, BUT IT]', itemLink, MONEY(auctionPrice))            
+              -- return
+            end
+
+            if auctionPrice <= WM.swordSellMin then
+              print('[Sword]', 'current price is too low, lets simply use our max value')
+              buyout = WM.swordSellMax
+            else 
+              if auctionPrice > WM.swordSellMax then
+                print('[Sword]', 'current price is too high, lets get half of it')           
+                buyout = math.floor(auctionPrice/2)           
+                print('[Sword]', 'new price', MONEY(buyout))
+                if buyout >= WM.swordSellMaxMax then
+                  print('[Sword]', 'new price is still WAY high, lets use our max max')
+                  buyout = WM.swordSellMaxMax
+                  print('[Sword]', 'new price', MONEY(buyout))
+                end
+              end
+            end
+          end
+          
+          dsprofit = MONEY(buyout)
+        end
+
+        if buyout > 0 then                 
+          buyout = math.floor(buyout/gold)*gold
+
+          local location = ItemLocation:CreateFromBagAndSlot(bagId, slotId)  
+          print(itemLink, dsprofit, overselling)
           tryingPosting = itemLink
+
           C_AuctionHouse.PostItem(location, duration, quantity, nil, buyout)
+          
+          C_Timer.After(5, function() 
+            if tryingPosting == itemLink then
+              print('[AH Dropped]')
+              tryingPosting = nil
+              isCurrentlyPosting = false
+            end
+          end)
           return
-        else
-          print('[Skipped]', itemID, itemLink)
         end
       end
     end
   end
+  
+  isCurrentlyPosting = false
 end
 
 function AuctionatorSaleItemMixin:PostItem(confirmed)
