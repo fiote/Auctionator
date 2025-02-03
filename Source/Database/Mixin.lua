@@ -59,7 +59,8 @@ function Auctionator.DatabaseMixin:_Get(dbKey)
         l={}, -- Lowest low price on a given day
         h={}, -- Highest low price on a given day
         a={}, -- Highest quantity seen on a given day
-        m=0   -- Last seen minimum price
+        m=0,   -- Last seen minimum price,
+        qty=0
       }
     end
   end
@@ -96,7 +97,8 @@ function Auctionator.DatabaseMixin:_SetPrice(dbKey, buyoutPrice, available)
       l={}, -- Lowest low price on a given day
       h={}, -- Highest low price on a given day
       a={}, -- Highest quantity seen on a given day
-      m=0   -- Last seen minimum price
+      m=0,   -- Last seen minimum price,
+      qty=0
     }
   end
 
@@ -109,7 +111,8 @@ function Auctionator.DatabaseMixin:_SetPrice(dbKey, buyoutPrice, available)
         l={}, -- Lowest low price on a given day
         h={}, -- Highest low price on a given day
         a={}, -- Highest quantity seen on a given day
-        m=0   -- Last seen minimum price
+        m=0,   -- Last seen minimum price
+        qty=0
       }
     end
   end  
@@ -169,6 +172,10 @@ function Auctionator.DatabaseMixin:_SetPrice(dbKey, buyoutPrice, available)
     end
   end
 
+  if available ~= nil then
+    priceData.qty = available
+  end
+
   self.db[dbKey] = LibCBOR:Serialize(priceData)
 end
 
@@ -185,6 +192,24 @@ function Auctionator.DatabaseMixin:GetFirstPrice(dbKeys)
     local price = self:GetPrice(dbKey)
     if price then
       return price
+    end
+  end
+  return nil
+end
+
+function Auctionator.DatabaseMixin:GetEntry(dbKey)
+  if self.db[dbKey] ~= nil then
+    return self:_Get(dbKey)
+  else
+    return nil
+  end
+end
+
+function Auctionator.DatabaseMixin:GetFirstEntry(dbKeys)
+  for _, dbKey in ipairs(dbKeys) do
+    local entry = self:GetEntry(dbKey)
+    if entry then
+      return entry
     end
   end
   return nil

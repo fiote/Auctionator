@@ -1,6 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
   <Script file="MultiSearch.lua" />
   <Script file="GetAuctionPrice.lua" />
+  <Script file="GetAuctionEntry.lua" />
   <Script file="GetAuctionAge.lua" />
   <Script file="IsAuctionDataExact.lua" />
   <Script file="GetVendorPrice.lua" />
