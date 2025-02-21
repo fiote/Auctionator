@@ -763,6 +763,7 @@ f:RegisterEvent("AUCTION_HOUSE_THROTTLED_SYSTEM_READY")
 f:SetScript("OnEvent", OnCurrentlyPurchasingEvent)
 
 function MONEY(money)
+  if money == nil then return '0g' end
   return Auctionator.Utilities.CreatePaddedMoneyString(money, false, false)
 end
 
@@ -826,11 +827,11 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
           local auctionPrice = Auctionator.API.v1.GetAuctionPriceByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
           local auctionEntry = Auctionator.API.v1.GetAuctionEntryByItemID('AuctionatorSaleItemMixin:RunAutoLogic', itemID)
 
-          print('[Sword]', 'price', MONEY(auctionPrice), 'qty', tostring(auctionEntry.qty))
-            
           local auctionQty = 0
           if auctionEntry and auctionEntry.qty then auctionQty = auctionEntry.qty end
-
+          
+          print('[Sword]', 'price', MONEY(auctionPrice), 'qty', tostring(auctionQty))
+            
           if auctionQty < 1 then
             print('[Sword]', 'no amount, lets set it to max')
             buyout = WM.swordSellMax
@@ -839,7 +840,6 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
               print('[Sword]', '[GOOD PRICE, BUT IT]', itemLink, MONEY(auctionPrice))            
               -- return
             end
-
             if auctionPrice <= WM.swordSellMin then
               print('[Sword]', 'current price is too low, lets simply use our max value')
               buyout = WM.swordSellMax
@@ -848,11 +848,19 @@ function AuctionatorSaleItemMixin:RunAutoLogic()
                 print('[Sword]', 'current price is too high, lets get half of it')           
                 buyout = math.floor(auctionPrice/2)           
                 print('[Sword]', 'new price', MONEY(buyout))
+                if buyout <= WM.swordSellMin then
+                  print('[Sword]', 'new price is still WAY low, lets just use our max')
+                  buyout = WM.swordSellMax
+                  print('[Sword]', 'new price', MONEY(buyout))
+                end
                 if buyout >= WM.swordSellMaxMax then
                   print('[Sword]', 'new price is still WAY high, lets use our max max')
                   buyout = WM.swordSellMaxMax
                   print('[Sword]', 'new price', MONEY(buyout))
                 end
+              else
+                print('[Sword]', 'current price is good, lets use it')
+                buyout = auctionPrice - gold
               end
             end
           end
